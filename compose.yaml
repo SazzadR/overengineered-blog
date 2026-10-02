@@ -23,6 +23,15 @@ services:
             - POSTGRES_DB=overengineered-blog
         ports:
             - "5432:5432"
+    k6:
+        image: grafana/k6
+        container_name: overengineered-loadtest
+        volumes:
+            - ./k6:/scripts
+        profiles:
+            - testing
+        depends_on:
+            - core-backend
 
 volumes:
     rdbms-data:
