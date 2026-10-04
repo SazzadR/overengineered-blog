@@ -1,95 +1,153 @@
 # Overengineered Blog
 
-A good rule of thumb in software engineering is to **keep it simple whenever possible**.
+A good rule of thumb in software engineering is to **keep things simple whenever possible**.
 
 This project does the opposite.
 
-**Overengineered Blog** is a deliberately overcomplicated blogging application built to experiment with the kind of
-architecture and infrastructure that a normal blog absolutely does not need.
-But are indispensable for mission-critical business applications.
+**Overengineered Blog** is a deliberately overcomplicated blogging application built to experiment with architecture, infrastructure, and engineering practices that a normal blog absolutely does not need, but larger mission-critical systems often do.
 
-## Tech Stacks
+## Table of Contents
+
+- [Tech Stack](#tech-stack)
+- [Roadmap](#roadmap)
+- [Getting Started](#getting-started)
+- [Non-Functional Experiments](#non-functional-experiments)
+  - [Load Testing](#load-testing)
+  - [Async Benefits for I/O-Bound Operations](#async-benefits-for-io-bound-operations)
+- [Work in Progress](#work-in-progress)
+
+## Tech Stack
 
 - FastAPI
 - PostgreSQL
 - Docker
 - Grafana k6
 
-## To-Do
+## Roadmap
 
 - [x] Load testing with k6
-- [ ] Master-Slave DB architecture with replication
+- [ ] Primary-replica database architecture with replication
 - [ ] Kubernetes
 - [ ] CI/CD with Jenkins X
-- [ ] CI/CD with Github actions
-- [ ] Observability with Prometheus, Grafana and OpenTelemetry
+- [ ] CI/CD with GitHub Actions
+- [ ] Observability with Prometheus, Grafana, and OpenTelemetry
 
-## Installation
+## Getting Started
 
-To start the application simply run:
+Start the application with:
 
 ```shell
+cd core-backend && cp .env.example .env && cd ..
+
 docker compose up -d
 ```
 
-## Non-Functional Features
+## Non-Functional Experiments
 
 ### Load Testing
 
-We added [Grafana k6](https://k6.io/) for load-testing. To load-test the APIs run the following:
+The project uses [Grafana k6](https://k6.io/) for load testing.
+
+Run the load test with:
 
 ```shell
 docker compose --profile testing run --rm k6 \
   run /scripts/load-test.js
 ```
 
-#### Async Benefits for I/O Bound Operation - A Practical Demonstration.
-
-It's always more enlightening to see things in action rather than just knowing.
-So here is a demonstration of the benefits of async for I/O bound operation.
-
-* We will limit the FastAPI application to use only 1
-  thread (<a href="https://starlette.dev/threadpool/" target="_blank">default 40</a>)
-  and also disable the database pooling.
-
-```shell
-# Stop the current docker containers to prevent port conflicts and create new git worktree
-docker compose down
-git worktree add ../overengineered-blog-sync c5c0af2b4c1920d3cf3cfd5e3d08c22c8236ef21
-# Open a new terminal tab and go to that worktree and run the docker containers
-cd ../overengineered-blog-sync
-cp .env.example .env
-docker compose up -d --build
-```
-
-* We are running expensive SQL in the [healthcheck](core-backend/src/main.py#L29) API. Which will take 5 seconds to
-  run.
-* Now let's test with 10 concurrent user. It will take `(10 * 5) ≈ 50` seconds to complete. (Make sure to run from `overengineered-blog-sync` directory)
-
-```shell
-docker compose --profile testing run --rm k6 \
-  run /scripts/load-test.js
-```
-![Without Async](/docs/2026-10-04_14-56.png?raw=true "Without Async")
-
-* Remove the `overengineered-blog-sync` worktree after the experiment and get back to main branch to `overengineered-blog` directory.
-
-```shell
-# Stop containers from `overengineered-blog-sync` worktree
-docker compose down
-# Remove the worktree. Got to `overengineered-blog` directory and run the following
-git worktree remove ../overengineered-blog-sync
-# Start the containers
-docker compose up -d --build
-```
 ---
 
-* Now let's test with 10 concurrent user. It will take around `5` seconds to complete.
+### Async Benefits for I/O-Bound Operations
+
+It is easier to understand the benefit of async I/O by seeing it under load.
+
+This experiment compares:
+
+1. A synchronous version restricted to a single worker thread
+2. An asynchronous version that can handle multiple requests while waiting for database I/O
+
+Database connection pooling is also disabled so it does not affect the experiment.
+
+#### 1. Run the synchronous version
+
+The synchronous implementation exists in an older Git commit.
+
+Instead of checking out that commit directly and losing the current README instructions, create a separate Git worktree:
+
+```shell
+# Stop the current containers to avoid port conflicts
+docker compose down
+
+# Create a worktree using the synchronous implementation
+git worktree add ../overengineered-blog-sync c5c0af2b4c1920d3cf3cfd5e3d08c22c8236ef21
+
+# Move into the worktree
+cd ../overengineered-blog-sync
+
+cp .env.example .env
+
+docker compose up -d --build
+```
+
+In this version:
+
+- FastAPI is limited to **1 thread**
+- Starlette normally allows up to [40 thread-pool tokens](https://starlette.dev/threadpool/)
+- Database connection pooling is disabled
+- The [`healthcheck`](core-backend/src/main.py#L29) endpoint runs an intentionally slow SQL query that takes about **5 seconds**
+
+Now send **10 concurrent requests**:
 
 ```shell
 docker compose --profile testing run --rm k6 \
   run /scripts/load-test.js
 ```
-![Without Async](/docs/2026-10-04_14-57.png?raw=true "With Async")
 
-### Work in progress...
+Because only one synchronous request can execute at a time:
+
+```text
+10 requests × 5 seconds ≈ 50 seconds
+```
+
+![Synchronous Result](/docs/2026-10-04_14-56.png?raw=true "Synchronous Result")
+
+#### 2. Clean up the synchronous worktree
+
+```shell
+# Run inside overengineered-blog-sync
+docker compose down
+
+# Return to the main repository
+cd ../overengineered-blog
+
+# Remove the temporary worktree
+git worktree remove ../overengineered-blog-sync
+
+# Start the current version
+docker compose up -d --build
+```
+
+#### 3. Run the asynchronous version
+
+Run the same load test again:
+
+```shell
+docker compose --profile testing run --rm k6 \
+  run /scripts/load-test.js
+```
+
+The same **10 concurrent requests** now finish in roughly:
+
+```text
+≈ 5 seconds
+```
+
+![Asynchronous Result](/docs/2026-10-04_14-57.png?raw=true "Asynchronous Result")
+
+While one request waits for database I/O, the event loop can continue processing other requests instead of blocking.
+
+This demonstrates one of the key benefits of async for I/O-bound workloads.
+
+## Work in Progress
+
+More overengineering is coming.
