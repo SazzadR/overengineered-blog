@@ -53,17 +53,18 @@ So here is a demonstration of the benefits of async for I/O bound operation.
   and also disable the database pooling.
 
 ```shell
-git worktree add ../overengineered-blog-sync c5c0af2b4c1920d3cf3cfd5e3d08c22c8236ef21
-# Stop the current docker containers to prevent port conflicts
+# Stop the current docker containers to prevent port conflicts and create new git worktree
 docker compose down
+git worktree add ../overengineered-blog-sync c5c0af2b4c1920d3cf3cfd5e3d08c22c8236ef21
 # Open a new terminal tab and go to that worktree and run the docker containers
 cd ../overengineered-blog-sync
-docker compose up -d
+cp .env.example .env
+docker compose up -d --build
 ```
 
 * We are running expensive SQL in the [healthcheck](core-backend/src/main.py#L29) API. Which will take 5 seconds to
   run.
-* Now let's test with 10 concurrent user. It will take `(10 * 5) ≈ 50` seconds to complete.
+* Now let's test with 10 concurrent user. It will take `(10 * 5) ≈ 50` seconds to complete. (Make sure to run from `overengineered-blog-sync` directory)
 
 ```shell
 docker compose --profile testing run --rm k6 \
@@ -71,6 +72,24 @@ docker compose --profile testing run --rm k6 \
 ```
 ![Without Async](/docs/2026-10-04_14-56.png?raw=true "Without Async")
 
+* Remove the `overengineered-blog-sync` worktree after the experiment and get back to main branch to `overengineered-blog` directory.
+
+```shell
+# Stop containers from `overengineered-blog-sync` worktree
+docker compose down
+# Remove the worktree. Got to `overengineered-blog` directory and run the following
+git worktree remove ../overengineered-blog-sync
+# Start the containers
+docker compose up -d --build
+```
 ---
+
+* Now let's test with 10 concurrent user. It will take around `5` seconds to complete.
+
+```shell
+docker compose --profile testing run --rm k6 \
+  run /scripts/load-test.js
+```
+![Without Async](/docs/2026-10-04_14-57.png?raw=true "With Async")
 
 ### Work in progress...
