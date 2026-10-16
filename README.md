@@ -27,7 +27,7 @@ This project does the opposite.
 
 - [x] Load testing with k6
 - [ ] Primary-replica database architecture with replication
-- [ ] Kubernetes
+- [ ] Kubernetes (in progress)
 - [ ] CI/CD with Jenkins X
 - [ ] CI/CD with GitHub Actions
 - [ ] Observability with Prometheus, Grafana, and OpenTelemetry
