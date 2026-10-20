@@ -11,7 +11,7 @@ SessionLocal = async_sessionmaker(bind=engine, autocommit=False, autoflush=False
 class Base(DeclarativeBase):
     metadata = MetaData(
         naming_convention={
-            "pk": "%(table_name)s_pkey)",
+            "pk": "%(table_name)s_pkey",
         }
     )
 

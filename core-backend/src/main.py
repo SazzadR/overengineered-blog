@@ -4,14 +4,16 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .database import get_db
+from .posts.router import router as posts_router
 
 app = FastAPI()
 
 v1_router = APIRouter(prefix="/api/v1")
+v1_router.include_router(posts_router)
 app.include_router(v1_router)
 
 
-@app.get("/health")
+@app.get("/health/")
 async def health_check(db: Session = Depends(get_db)):
     try:
         await db.scalar(text("select 1 from (select pg_sleep(5)) as delay"))
