@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .posts.router import router as posts_router
+from .telemetry import setup_telemetry
 
 app = FastAPI()
 
@@ -22,3 +23,6 @@ async def health_check(db: Session = Depends(get_db)):
         raise HTTPException(detail="Health check failed.", status_code=500)
 
     return JSONResponse(content={"status": "Ok."}, status_code=200)
+
+
+setup_telemetry(app=app)

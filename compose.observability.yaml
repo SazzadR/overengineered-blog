@@ -1,0 +1,35 @@
+services:
+    prometheus:
+        image: prom/prometheus:v3.15.1
+        container_name: overengineered-prometheus
+        restart: unless-stopped
+        command:
+            - "--config.file=/etc/prometheus/prometheus.yaml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--storage.tsdb.retention.time=15d"
+        ports:
+            - "9090:9090"
+        volumes:
+            - ./config/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+            - prometheus-data:/prometheus
+        networks:
+            - observability
+    otel-collector:
+        image: otel/opentelemetry-collector
+        container_name: overengineered-otelcol
+        restart: unless-stopped
+        command: [ "--config=/etc/otelcol/config.yaml" ]
+        ports:
+            - "4317:4317" # OTLP gRPC receiver
+            - "4318:4318" # OTLP http receiver
+        volumes:
+            - ./config/otelcol/config.yaml:/etc/otelcol/config.yaml:ro
+            - ./file-exporter:/file-exporter:rwz
+        networks:
+            - observability
+            - app
+        depends_on:
+            - prometheus
+
+volumes:
+    prometheus-data:
