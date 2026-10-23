@@ -11,6 +11,7 @@ This project does the opposite.
 - [Tech Stack](#tech-stack)
 - [Roadmap](#roadmap)
 - [Getting Started](#getting-started)
+- [Observability](#observability)
 - [Non-Functional Experiments](#non-functional-experiments)
   - [Load Testing](#load-testing)
   - [Async Benefits for I/O-Bound Operations](#async-benefits-for-io-bound-operations)
@@ -22,6 +23,8 @@ This project does the opposite.
 - PostgreSQL
 - Docker
 - Grafana k6
+- OpenTelemetry
+- Prometheus
 
 ## Roadmap
 
@@ -31,6 +34,10 @@ This project does the opposite.
 - [ ] CI/CD with Jenkins X
 - [ ] CI/CD with GitHub Actions
 - [ ] Observability with Prometheus, Grafana, and OpenTelemetry
+  - [x] HTTP metrics with OpenTelemetry and Prometheus
+  - [ ] Distributed tracing
+  - [ ] Log collection
+  - [ ] Grafana dashboards
 
 ## Getting Started
 
@@ -41,6 +48,18 @@ cd core-backend && cp .env.example .env && cd ..
 
 docker compose up -d
 ```
+
+## Observability
+
+HTTP metrics are collected through OpenTelemetry and scraped by Prometheus:
+
+```text
+FastAPI → OpenTelemetry Collector → Prometheus
+```
+
+Docker Compose starts these services alongside the app. View metrics at [localhost:9090](http://localhost:9090).
+
+Distributed tracing, log collection, and Grafana dashboards are planned.
 
 ## Non-Functional Experiments
 

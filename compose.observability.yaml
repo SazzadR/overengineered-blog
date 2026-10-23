@@ -14,6 +14,22 @@ services:
             - prometheus-data:/prometheus
         networks:
             - observability
+    otel-collector:
+        image: otel/opentelemetry-collector
+        container_name: overengineered-otelcol
+        restart: unless-stopped
+        command: [ "--config=/etc/otelcol/config.yaml" ]
+        ports:
+            - "4317:4317" # OTLP gRPC receiver
+            - "4318:4318" # OTLP http receiver
+        volumes:
+            - ./config/otelcol/config.yaml:/etc/otelcol/config.yaml:ro
+            - ./file-exporter:/file-exporter:rwz
+        networks:
+            - observability
+            - app
+        depends_on:
+            - prometheus
 
 volumes:
     prometheus-data:
