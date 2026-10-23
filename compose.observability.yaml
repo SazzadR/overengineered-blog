@@ -1,0 +1,19 @@
+services:
+    prometheus:
+        image: prom/prometheus:v3.15.1
+        container_name: overengineered-prometheus
+        restart: unless-stopped
+        command:
+            - "--config.file=/etc/prometheus/prometheus.yaml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--storage.tsdb.retention.time=15d"
+        ports:
+            - "9090:9090"
+        volumes:
+            - ./config/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+            - prometheus-data:/prometheus
+        networks:
+            - observability
+
+volumes:
+    prometheus-data:
